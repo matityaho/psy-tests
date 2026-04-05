@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Test {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?  @db.Text
+  category       String?
+  ageRange       String?
+
+  scoringRules   Json
+  inputs         Json
+  outputs        Json
+
+  rawDescription String?  @db.Text
+  documentUrls   String[]
+
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  assessments    Assessment[]
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  gender      String
+  notes       String?  @db.Text
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assessments Assessment[]
+}
+
+model Assessment {
+  id             String   @id @default(cuid())
+
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  patientId      String
+
+  test           Test     @relation(fields: [testId], references: [id])
+  testId         String
+
+  inputScores    Json
+  results        Json?
+
+  respondentType String?
+  assessmentDate DateTime @default(now())
+  notes          String?  @db.Text
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([patientId])
+  @@index([testId])
+}
