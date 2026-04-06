@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { updateTestSchema } from "@/lib/validations/test";
+import { requireSession, requireAdmin } from "@/lib/api-auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ testId: string }> },
 ) {
+  const { error } = await requireSession();
+  if (error) return error;
+
   const { testId } = await params;
   const test = await prisma.test.findUnique({ where: { id: testId } });
 
@@ -20,6 +24,9 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ testId: string }> },
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const { testId } = await params;
   const body = await request.json();
   const parsed = updateTestSchema.safeParse(body);
@@ -43,6 +50,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ testId: string }> },
 ) {
+  const { error } = await requireAdmin();
+  if (error) return error;
+
   const { testId } = await params;
 
   const assessmentCount = await prisma.assessment.count({
