@@ -5,7 +5,7 @@ import { scoringRuleSetSchema } from "@/lib/types";
 
 const scoringRequestSchema = z.object({
   ruleSet: scoringRuleSetSchema,
-  inputs: z.record(z.number()),
+  inputs: z.record(z.string(), z.number()),
   context: z.object({
     age: z.number(),
     gender: z.string(),

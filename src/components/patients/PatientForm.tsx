@@ -113,7 +113,7 @@ export function PatientForm({ initial }: PatientFormProps) {
             </div>
             <div>
               <Label htmlFor="gender">Gender</Label>
-              <Select value={gender} onValueChange={setGender}>
+              <Select value={gender} onValueChange={(v) => setGender(v ?? "")}>
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>

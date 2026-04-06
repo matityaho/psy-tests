@@ -16,13 +16,14 @@ export function executeScoring(
 
   for (const step of ruleSet.steps) {
     if (
+      step.type === "lookup_table" &&
       step.conditionFilters &&
       !matchesConditions(step.conditionFilters, resolvedConditions)
     ) {
       continue;
     }
 
-    const result = executeStep(step, inputs, results, resolvedConditions);
+    const result = executeStep(step, inputs, results);
     if (result) {
       results[result.outputId] = result;
     }
@@ -83,7 +84,6 @@ function executeStep(
   step: ScoringStep,
   inputs: Record<string, number>,
   priorResults: Record<string, ScoringResult>,
-  _conditions: Record<string, string>,
 ): ScoringResult | null {
   switch (step.type) {
     case "lookup_table":

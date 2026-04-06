@@ -33,7 +33,7 @@ export async function GET(
 
   const buffer = await renderToBuffer(PatientReport({ patient, assessments }));
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${patient.firstName}_${patient.lastName}_report.pdf"`,

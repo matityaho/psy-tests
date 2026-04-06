@@ -1,7 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const [testCount, patientCount, recentPatients, recentAssessments] =
@@ -60,9 +63,12 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Patients</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/patients/new">New Patient</Link>
-            </Button>
+            <Link
+              href="/patients/new"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              New Patient
+            </Link>
           </CardHeader>
           <CardContent>
             {recentPatients.length === 0 ? (
@@ -91,9 +97,12 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Recent Assessments</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/tests">View Tests</Link>
-            </Button>
+            <Link
+              href="/tests"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              View Tests
+            </Link>
           </CardHeader>
           <CardContent>
             {recentAssessments.length === 0 ? (

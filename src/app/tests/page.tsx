@@ -1,7 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { TestCard } from "@/components/tests/TestCard";
+import { cn } from "@/lib/utils";
 
 export default async function TestsPage() {
   const tests = await prisma.test.findMany({
@@ -13,17 +16,17 @@ export default async function TestsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Test Library</h2>
-        <Button asChild>
-          <Link href="/tests/new">New Test</Link>
-        </Button>
+        <Link href="/tests/new" className={cn(buttonVariants())}>
+          New Test
+        </Link>
       </div>
 
       {tests.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">
           <p className="text-muted-foreground">No tests yet.</p>
-          <Button className="mt-4" asChild>
-            <Link href="/tests/new">Create your first test</Link>
-          </Button>
+          <Link href="/tests/new" className={cn(buttonVariants(), "mt-4")}>
+            Create your first test
+          </Link>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

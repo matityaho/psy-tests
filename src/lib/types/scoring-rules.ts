@@ -43,8 +43,8 @@ export const lookupTableStepSchema = z.object({
   type: z.literal("lookup_table"),
   outputId: z.string(),
   inputId: z.string(),
-  conditionFilters: z.record(z.string()).optional(),
-  table: z.record(z.number()),
+  conditionFilters: z.record(z.string(), z.string()).optional(),
+  table: z.record(z.string(), z.number()),
 });
 
 export type LookupTableStep = z.infer<typeof lookupTableStepSchema>;
@@ -53,7 +53,7 @@ export const formulaStepSchema = z.object({
   type: z.literal("formula"),
   outputId: z.string(),
   formula: z.string(),
-  variables: z.record(z.string()),
+  variables: z.record(z.string(), z.string()),
 });
 
 export type FormulaStep = z.infer<typeof formulaStepSchema>;
@@ -77,7 +77,7 @@ export const mappingStepSchema = z.object({
   type: z.literal("mapping"),
   outputId: z.string(),
   sourceId: z.string(),
-  map: z.record(z.union([z.string(), z.number()])),
+  map: z.record(z.string(), z.union([z.string(), z.number()])),
 });
 
 export type MappingStep = z.infer<typeof mappingStepSchema>;

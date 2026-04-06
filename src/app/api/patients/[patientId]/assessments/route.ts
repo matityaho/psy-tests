@@ -67,7 +67,8 @@ export async function POST(
       patientId,
       testId: parsed.data.testId,
       inputScores: parsed.data.inputScores,
-      results,
+      results:
+        results as unknown as import("@prisma/client").Prisma.InputJsonValue,
       respondentType: parsed.data.respondentType,
       assessmentDate: parsed.data.assessmentDate || new Date(),
       notes: parsed.data.notes,

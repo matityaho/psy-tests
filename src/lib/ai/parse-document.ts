@@ -1,10 +1,12 @@
 import fs from "fs/promises";
 import path from "path";
 
+type ImageMediaType = "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+
 export type DocumentBlock =
   | {
       type: "image";
-      source: { type: "base64"; media_type: string; data: string };
+      source: { type: "base64"; media_type: ImageMediaType; data: string };
     }
   | {
       type: "document";
@@ -12,7 +14,7 @@ export type DocumentBlock =
     };
 
 const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
-const MEDIA_TYPES: Record<string, string> = {
+const MEDIA_TYPES: Record<string, ImageMediaType> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -34,12 +36,12 @@ export async function fileToContentBlock(
     };
   }
 
-  if (IMAGE_EXTENSIONS.includes(ext)) {
+  if (IMAGE_EXTENSIONS.includes(ext) && MEDIA_TYPES[ext]) {
     return {
       type: "image",
       source: {
         type: "base64",
-        media_type: MEDIA_TYPES[ext] as string,
+        media_type: MEDIA_TYPES[ext] as ImageMediaType,
         data: base64,
       },
     };

@@ -117,7 +117,10 @@ export function AssessmentEntry({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="respondentType">Respondent Type (optional)</Label>
-              <Select value={respondentType} onValueChange={setRespondentType}>
+              <Select
+                value={respondentType}
+                onValueChange={(v) => setRespondentType(v ?? "")}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>

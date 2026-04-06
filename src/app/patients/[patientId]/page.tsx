@@ -1,8 +1,11 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PatientCard } from "@/components/patients/PatientCard";
 import { ResultsTable } from "@/components/results/ResultsTable";
@@ -32,12 +35,18 @@ export default async function PatientDetailPage({
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Patient Card</h2>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href={`/patients/${patientId}/add-test`}>Add Test</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <a href={`/api/patients/${patientId}/export`}>Export PDF</a>
-          </Button>
+          <Link
+            href={`/patients/${patientId}/add-test`}
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Add Test
+          </Link>
+          <a
+            href={`/api/patients/${patientId}/export`}
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            Export PDF
+          </a>
         </div>
       </div>
 
@@ -46,11 +55,12 @@ export default async function PatientDetailPage({
       {patient.assessments.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">
           <p className="text-muted-foreground">No assessments yet.</p>
-          <Button className="mt-4" asChild>
-            <Link href={`/patients/${patientId}/add-test`}>
-              Add first assessment
-            </Link>
-          </Button>
+          <Link
+            href={`/patients/${patientId}/add-test`}
+            className={cn(buttonVariants(), "mt-4")}
+          >
+            Add first assessment
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">
@@ -77,7 +87,10 @@ export default async function PatientDetailPage({
                 {assessment.results ? (
                   <ResultsTable
                     results={
-                      assessment.results as Record<string, ScoringResult>
+                      assessment.results as unknown as Record<
+                        string,
+                        ScoringResult
+                      >
                     }
                   />
                 ) : (

@@ -1,8 +1,11 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { InputOutputPreview } from "@/components/tests/InputOutputPreview";
 import type {
@@ -43,9 +46,12 @@ export default async function TestDetailPage({
             )}
           </div>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/tests/${test.id}/edit`}>Edit Rules</Link>
-        </Button>
+        <Link
+          href={`/tests/${test.id}/edit`}
+          className={cn(buttonVariants({ variant: "outline" }))}
+        >
+          Edit Rules
+        </Link>
       </div>
 
       {test.description && (

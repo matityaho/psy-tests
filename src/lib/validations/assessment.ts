@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const createAssessmentSchema = z.object({
   testId: z.string().min(1),
-  inputScores: z.record(z.number()),
+  inputScores: z.record(z.string(), z.number()),
   respondentType: z.enum(["self", "parent", "teacher"]).optional(),
   assessmentDate: z
     .string()
@@ -12,7 +12,7 @@ export const createAssessmentSchema = z.object({
 });
 
 export const updateAssessmentSchema = z.object({
-  inputScores: z.record(z.number()).optional(),
+  inputScores: z.record(z.string(), z.number()).optional(),
   respondentType: z.enum(["self", "parent", "teacher"]).optional(),
   notes: z.string().optional(),
 });
