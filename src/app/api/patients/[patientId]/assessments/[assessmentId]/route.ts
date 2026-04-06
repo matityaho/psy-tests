@@ -3,12 +3,15 @@ import { prisma } from "@/lib/db";
 import { updateAssessmentSchema } from "@/lib/validations/assessment";
 import { executeScoring } from "@/lib/scoring-engine";
 import { ScoringRuleSet } from "@/lib/types";
+import { requirePatientOwner } from "@/lib/api-auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ patientId: string; assessmentId: string }> },
 ) {
-  const { assessmentId } = await params;
+  const { patientId, assessmentId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   const assessment = await prisma.assessment.findUnique({
     where: { id: assessmentId },
@@ -30,6 +33,9 @@ export async function PUT(
   { params }: { params: Promise<{ patientId: string; assessmentId: string }> },
 ) {
   const { patientId, assessmentId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
+
   const body = await request.json();
   const parsed = updateAssessmentSchema.safeParse(body);
 
@@ -91,9 +97,11 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ assessmentId: string }> },
+  { params }: { params: Promise<{ patientId: string; assessmentId: string }> },
 ) {
-  const { assessmentId } = await params;
+  const { patientId, assessmentId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   await prisma.assessment.delete({ where: { id: assessmentId } });
 

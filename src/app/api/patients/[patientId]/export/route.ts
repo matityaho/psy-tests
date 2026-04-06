@@ -3,12 +3,15 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/db";
 import { PatientReport } from "@/lib/pdf/report-generator";
 import type { ScoringResult } from "@/lib/types";
+import { requirePatientOwner } from "@/lib/api-auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },

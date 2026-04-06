@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { updatePatientSchema } from "@/lib/validations/patient";
+import { requirePatientOwner } from "@/lib/api-auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   const patient = await prisma.patient.findUnique({
     where: { id: patientId },
@@ -30,6 +33,9 @@ export async function PUT(
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
+
   const body = await request.json();
   const parsed = updatePatientSchema.safeParse(body);
 
@@ -53,6 +59,8 @@ export async function DELETE(
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   await prisma.patient.delete({ where: { id: patientId } });
 

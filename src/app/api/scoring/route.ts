@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeScoring } from "@/lib/scoring-engine";
 import { scoringRuleSetSchema } from "@/lib/types";
+import { requireSession } from "@/lib/api-auth";
 
 const scoringRequestSchema = z.object({
   ruleSet: scoringRuleSetSchema,
@@ -14,6 +15,9 @@ const scoringRequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const { error } = await requireSession();
+  if (error) return error;
+
   const body = await request.json();
   const parsed = scoringRequestSchema.safeParse(body);
 

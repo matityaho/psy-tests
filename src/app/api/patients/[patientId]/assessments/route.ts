@@ -3,12 +3,15 @@ import { prisma } from "@/lib/db";
 import { createAssessmentSchema } from "@/lib/validations/assessment";
 import { executeScoring } from "@/lib/scoring-engine";
 import { ScoringRuleSet } from "@/lib/types";
+import { requirePatientOwner } from "@/lib/api-auth";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error } = await requirePatientOwner(patientId);
+  if (error) return error;
 
   const assessments = await prisma.assessment.findMany({
     where: { patientId },
@@ -24,6 +27,9 @@ export async function POST(
   { params }: { params: Promise<{ patientId: string }> },
 ) {
   const { patientId } = await params;
+  const { error, patient } = await requirePatientOwner(patientId);
+  if (error) return error;
+
   const body = await request.json();
   const parsed = createAssessmentSchema.safeParse(body);
 
@@ -32,11 +38,6 @@ export async function POST(
       { error: parsed.error.flatten() },
       { status: 400 },
     );
-  }
-
-  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
-  if (!patient) {
-    return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   }
 
   const test = await prisma.test.findUnique({
@@ -48,7 +49,7 @@ export async function POST(
 
   const now = new Date();
   const age = Math.floor(
-    (now.getTime() - patient.dateOfBirth.getTime()) /
+    (now.getTime() - patient!.dateOfBirth.getTime()) /
       (365.25 * 24 * 60 * 60 * 1000),
   );
 
@@ -57,7 +58,7 @@ export async function POST(
     parsed.data.inputScores,
     {
       age,
-      gender: patient.gender,
+      gender: patient!.gender,
       respondentType: parsed.data.respondentType,
     },
   );
