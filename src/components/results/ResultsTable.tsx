@@ -14,7 +14,14 @@ interface ResultsTableProps {
 }
 
 export function ResultsTable({ results }: ResultsTableProps) {
-  const entries = Object.values(results);
+  const entries = Object.values(results).filter(
+    (r) =>
+      r.type === "standard_score" ||
+      r.type === "interpretation" ||
+      (r.type === "custom" &&
+        !r.outputId.startsWith("mean_") &&
+        !r.outputId.startsWith("sd_")),
+  );
 
   if (entries.length === 0) {
     return (

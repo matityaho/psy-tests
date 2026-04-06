@@ -64,8 +64,8 @@ export const thresholdStepSchema = z.object({
   sourceOutputId: z.string(),
   thresholds: z.array(
     z.object({
-      min: z.number(),
-      max: z.number(),
+      min: z.number().nullable(),
+      max: z.number().nullable(),
       label: z.string(),
     }),
   ),

@@ -23,7 +23,7 @@ export function executeScoring(
       continue;
     }
 
-    const result = executeStep(step, inputs, results);
+    const result = executeStep(step, inputs, results, resolvedConditions);
     if (result) {
       results[result.outputId] = result;
     }
@@ -63,12 +63,18 @@ function resolveConditions(
 }
 
 function resolveAgeGroup(age: number): string {
-  if (age <= 5) return "0-5";
-  if (age <= 8) return "6-8";
-  if (age <= 11) return "9-11";
-  if (age <= 14) return "12-14";
-  if (age <= 17) return "15-17";
-  return "18+";
+  if (age <= 7) return "5-7";
+  if (age <= 10) return "8-10";
+  if (age <= 13) return "11-13";
+  if (age <= 16) return "14-16";
+  if (age <= 23) return "17-23";
+  if (age <= 29) return "24-29";
+  if (age <= 39) return "30-39";
+  if (age <= 49) return "40-49";
+  if (age <= 59) return "50-59";
+  if (age <= 69) return "60-69";
+  if (age <= 79) return "70-79";
+  return "80+";
 }
 
 function matchesConditions(
@@ -84,10 +90,11 @@ function executeStep(
   step: ScoringStep,
   inputs: Record<string, number>,
   priorResults: Record<string, ScoringResult>,
+  resolvedConditions: Record<string, string>,
 ): ScoringResult | null {
   switch (step.type) {
     case "lookup_table":
-      return executeLookup(step, inputs);
+      return executeLookup(step, inputs, resolvedConditions);
     case "formula":
       return executeFormula(step, inputs, priorResults);
     case "threshold":
@@ -100,8 +107,9 @@ function executeStep(
 function executeLookup(
   step: { outputId: string; inputId: string; table: Record<string, number> },
   inputs: Record<string, number>,
+  resolvedConditions: Record<string, string>,
 ): ScoringResult {
-  const inputValue = inputs[step.inputId];
+  const inputValue = resolvedConditions[step.inputId] ?? inputs[step.inputId];
 
   if (inputValue === undefined) {
     return {
@@ -162,7 +170,11 @@ function executeFormula(
   }
 
   try {
-    const value = evaluate(step.formula, scope) as number;
+    let expression = step.formula;
+    for (const [placeholder, val] of Object.entries(scope)) {
+      expression = expression.replaceAll(`{${placeholder}}`, String(val));
+    }
+    const value = evaluate(expression, scope) as number;
     return {
       outputId: step.outputId,
       label: step.outputId,
@@ -183,7 +195,7 @@ function executeThreshold(
   step: {
     outputId: string;
     sourceOutputId: string;
-    thresholds: { min: number; max: number; label: string }[];
+    thresholds: { min: number | null; max: number | null; label: string }[];
   },
   priorResults: Record<string, ScoringResult>,
 ): ScoringResult {
@@ -198,9 +210,9 @@ function executeThreshold(
     };
   }
 
+  const val = source.value as number;
   const match = step.thresholds.find(
-    (t) =>
-      (source.value as number) >= t.min && (source.value as number) <= t.max,
+    (t) => (t.min === null || val >= t.min) && (t.max === null || val <= t.max),
   );
 
   return {

@@ -3,9 +3,9 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+
 import { Badge } from "@/components/ui/badge";
 import { PatientCard } from "@/components/patients/PatientCard";
 import { ResultsTable } from "@/components/results/ResultsTable";
@@ -37,13 +37,13 @@ export default async function PatientDetailPage({
         <div className="flex gap-2">
           <Link
             href={`/patients/${patientId}/add-test`}
-            className={cn(buttonVariants({ variant: "outline" }))}
+            className={buttonVariants({ variant: "outline" })}
           >
             Add Test
           </Link>
           <a
             href={`/api/patients/${patientId}/export`}
-            className={cn(buttonVariants({ variant: "outline" }))}
+            className={buttonVariants({ variant: "outline" })}
           >
             Export PDF
           </a>
@@ -57,7 +57,7 @@ export default async function PatientDetailPage({
           <p className="text-muted-foreground">No assessments yet.</p>
           <Link
             href={`/patients/${patientId}/add-test`}
-            className={cn(buttonVariants(), "mt-4")}
+            className={buttonVariants({ className: "mt-4" })}
           >
             Add first assessment
           </Link>

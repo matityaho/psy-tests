@@ -3,9 +3,9 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+
 import { Badge } from "@/components/ui/badge";
 import { InputOutputPreview } from "@/components/tests/InputOutputPreview";
 import type {
@@ -48,7 +48,7 @@ export default async function TestDetailPage({
         </div>
         <Link
           href={`/tests/${test.id}/edit`}
-          className={cn(buttonVariants({ variant: "outline" }))}
+          className={buttonVariants({ variant: "outline" })}
         >
           Edit Rules
         </Link>

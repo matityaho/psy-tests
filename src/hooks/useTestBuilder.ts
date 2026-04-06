@@ -84,7 +84,9 @@ export function useTestBuilder() {
       if (!res.ok) {
         const data = await res.json();
         setError(
-          data.error?.fieldErrors ? "Validation error" : "Failed to save test",
+          data.error?.fieldErrors
+            ? "Validation error"
+            : data.error || "Failed to save test",
         );
         return;
       }
