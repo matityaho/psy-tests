@@ -2,20 +2,24 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { getRequiredSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export default async function DashboardPage() {
+  const session = await getRequiredSession();
+
   const [testCount, patientCount, recentPatients, recentAssessments] =
     await Promise.all([
       prisma.test.count({ where: { isActive: true } }),
-      prisma.patient.count(),
+      prisma.patient.count({ where: { userId: session.user.id } }),
       prisma.patient.findMany({
+        where: { userId: session.user.id },
         orderBy: { updatedAt: "desc" },
         take: 5,
       }),
       prisma.assessment.findMany({
+        where: { patient: { userId: session.user.id } },
         orderBy: { createdAt: "desc" },
         take: 5,
         include: { patient: true, test: true },
@@ -65,7 +69,7 @@ export default async function DashboardPage() {
             <CardTitle>Recent Patients</CardTitle>
             <Link
               href="/patients/new"
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               New Patient
             </Link>
@@ -99,7 +103,7 @@ export default async function DashboardPage() {
             <CardTitle>Recent Assessments</CardTitle>
             <Link
               href="/tests"
-              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
               View Tests
             </Link>
