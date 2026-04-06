@@ -27,7 +27,8 @@ export async function GET(
     return NextResponse.json({ error: "Patient not found" }, { status: 404 });
   }
 
-  const assessments = patient.assessments.map((a) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const assessments = patient.assessments.map((a: any) => ({
     test: { name: a.test.name },
     assessmentDate: a.assessmentDate,
     respondentType: a.respondentType,
