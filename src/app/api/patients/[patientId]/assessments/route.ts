@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { createAssessmentSchema } from "@/lib/validations/assessment";
 import { executeScoring } from "@/lib/scoring-engine";
 import { ScoringRuleSet } from "@/lib/types";
-import type { Prisma } from "@prisma/client";
 import { requirePatientOwner } from "@/lib/api-auth";
 
 export async function GET(
@@ -69,7 +68,8 @@ export async function POST(
       patientId,
       testId: parsed.data.testId,
       inputScores: parsed.data.inputScores,
-      results: results as unknown as Prisma.InputJsonValue,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results: results as any,
       respondentType: parsed.data.respondentType,
       assessmentDate: parsed.data.assessmentDate || new Date(),
       notes: parsed.data.notes,
