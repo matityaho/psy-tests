@@ -41,12 +41,6 @@ export default async function PatientDetailPage({
           >
             Add Test
           </Link>
-          <a
-            href={`/api/patients/${patientId}/export`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            Export PDF
-          </a>
         </div>
       </div>
 
@@ -91,6 +85,9 @@ export default async function PatientDetailPage({
                         string,
                         ScoringResult
                       >
+                    }
+                    inputScores={
+                      assessment.inputScores as Record<string, number>
                     }
                   />
                 ) : (
