@@ -8,7 +8,8 @@ const scoringRequestSchema = z.object({
   ruleSet: scoringRuleSetSchema,
   inputs: z.record(z.string(), z.number()),
   context: z.object({
-    age: z.number(),
+    ageYears: z.number().int().nonnegative(),
+    ageMonths: z.number().int().min(0).max(11),
     gender: z.string(),
     respondentType: z.string().optional(),
   }),

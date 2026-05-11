@@ -77,10 +77,16 @@ export default async function TestDetailPage({
                 <span>
                   {step.outputId}
                   {step.type === "lookup_table" &&
-                    ` (${Object.keys(step.table).length} entries)`}
+                    ` (${
+                      step.tablesByGroup
+                        ? `${Object.keys(step.tablesByGroup).length} groups`
+                        : `${Object.keys(step.table ?? {}).length} entries`
+                    })`}
                   {step.type === "formula" && `: ${step.formula}`}
                   {step.type === "threshold" &&
                     ` (${step.thresholds.length} ranges)`}
+                  {step.type === "z_score" &&
+                    ` (${Object.keys(step.statsByGroup).length} groups)`}
                 </span>
               </div>
             ))}

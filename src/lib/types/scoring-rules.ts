@@ -4,7 +4,7 @@ export const inputDefinitionSchema = z.object({
   id: z.string(),
   label: z.string(),
   description: z.string().optional(),
-  type: z.enum(["number", "integer"]),
+  type: z.enum(["number", "integer", "time_mmss"]),
   min: z.number().optional(),
   max: z.number().optional(),
   required: z.boolean(),
@@ -39,12 +39,24 @@ export const conditionVariableSchema = z.object({
 
 export type ConditionVariable = z.infer<typeof conditionVariableSchema>;
 
+export const ageGroupSchema = z.object({
+  id: z.string(),
+  minMonths: z.number().int().nonnegative(),
+  maxMonths: z.number().int().nonnegative(),
+});
+
+export type AgeGroup = z.infer<typeof ageGroupSchema>;
+
 export const lookupTableStepSchema = z.object({
   type: z.literal("lookup_table"),
   outputId: z.string(),
   inputId: z.string(),
   conditionFilters: z.record(z.string(), z.string()).optional(),
-  table: z.record(z.string(), z.number()),
+  table: z.record(z.string(), z.number()).optional(),
+  conditionKey: z.string().optional(),
+  tablesByGroup: z
+    .record(z.string(), z.record(z.string(), z.number()))
+    .optional(),
 });
 
 export type LookupTableStep = z.infer<typeof lookupTableStepSchema>;
@@ -82,11 +94,25 @@ export const mappingStepSchema = z.object({
 
 export type MappingStep = z.infer<typeof mappingStepSchema>;
 
+export const zScoreStepSchema = z.object({
+  type: z.literal("z_score"),
+  outputId: z.string(),
+  inputId: z.string(),
+  conditionKey: z.string(),
+  statsByGroup: z.record(
+    z.string(),
+    z.object({ mean: z.number(), sd: z.number().positive() }),
+  ),
+});
+
+export type ZScoreStep = z.infer<typeof zScoreStepSchema>;
+
 export const scoringStepSchema = z.discriminatedUnion("type", [
   lookupTableStepSchema,
   formulaStepSchema,
   thresholdStepSchema,
   mappingStepSchema,
+  zScoreStepSchema,
 ]);
 
 export type ScoringStep = z.infer<typeof scoringStepSchema>;
@@ -95,6 +121,7 @@ export const scoringRuleSetSchema = z.object({
   version: z.string(),
   description: z.string(),
   conditions: z.array(conditionVariableSchema),
+  ageGroups: z.array(ageGroupSchema).optional(),
   steps: z.array(scoringStepSchema),
 });
 
@@ -108,7 +135,8 @@ export interface ScoringResult {
 }
 
 export interface ScoringContext {
-  age: number;
+  ageYears: number;
+  ageMonths: number;
   gender: string;
   respondentType?: string;
 }

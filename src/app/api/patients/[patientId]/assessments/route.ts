@@ -4,6 +4,7 @@ import { createAssessmentSchema } from "@/lib/validations/assessment";
 import { executeScoring } from "@/lib/scoring-engine";
 import { ScoringRuleSet } from "@/lib/types";
 import { requirePatientOwner } from "@/lib/api-auth";
+import { computePatientAge } from "@/lib/age";
 
 export async function GET(
   _request: NextRequest,
@@ -47,17 +48,18 @@ export async function POST(
     return NextResponse.json({ error: "Test not found" }, { status: 404 });
   }
 
-  const now = new Date();
-  const age = Math.floor(
-    (now.getTime() - patient!.dateOfBirth.getTime()) /
-      (365.25 * 24 * 60 * 60 * 1000),
+  const assessmentDate = parsed.data.assessmentDate || new Date();
+  const { ageYears, ageMonths } = computePatientAge(
+    patient!.dateOfBirth,
+    assessmentDate,
   );
 
   const results = executeScoring(
     test.scoringRules as ScoringRuleSet,
     parsed.data.inputScores,
     {
-      age,
+      ageYears,
+      ageMonths,
       gender: patient!.gender,
       respondentType: parsed.data.respondentType,
     },
@@ -71,7 +73,7 @@ export async function POST(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       results: results as any,
       respondentType: parsed.data.respondentType,
-      assessmentDate: parsed.data.assessmentDate || new Date(),
+      assessmentDate,
       notes: parsed.data.notes,
     },
     include: { test: true },

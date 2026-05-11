@@ -5,10 +5,12 @@ export type {
   ScoringStep,
   ScoringResult,
   ScoringContext,
+  AgeGroup,
   LookupTableStep,
   FormulaStep,
   ThresholdStep,
   MappingStep,
+  ZScoreStep,
   ConditionVariable,
 } from "./scoring-rules";
 
@@ -17,4 +19,5 @@ export {
   outputDefinitionSchema,
   scoringRuleSetSchema,
   scoringStepSchema,
+  ageGroupSchema,
 } from "./scoring-rules";

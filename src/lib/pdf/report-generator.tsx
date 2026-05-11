@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { computePatientAge } from "@/lib/age";
 import type { ScoringResult } from "@/lib/types";
 
 const styles = StyleSheet.create({
@@ -49,10 +50,10 @@ interface ReportProps {
 }
 
 export function PatientReport({ patient, assessments }: ReportProps) {
-  const age = Math.floor(
-    (Date.now() - new Date(patient.dateOfBirth).getTime()) /
-      (365.25 * 24 * 60 * 60 * 1000),
+  const { ageYears, ageMonths } = computePatientAge(
+    new Date(patient.dateOfBirth),
   );
+  const ageLabel = `${ageYears} years, ${ageMonths} months`;
 
   return (
     <Document>
@@ -69,7 +70,7 @@ export function PatientReport({ patient, assessments }: ReportProps) {
           </Text>
           <Text style={styles.info}>
             <Text style={styles.infoLabel}>Age: </Text>
-            {age}
+            {ageLabel}
           </Text>
           <Text style={styles.info}>
             <Text style={styles.infoLabel}>Gender: </Text>

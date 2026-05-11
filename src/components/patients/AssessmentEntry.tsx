@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { InputDefinition } from "@/lib/types";
+import { parseTimeMMSS } from "@/lib/age";
 
 interface AssessmentEntryProps {
   patientId: string;
@@ -46,10 +47,20 @@ export function AssessmentEntry({
     setError(null);
 
     const inputScores: Record<string, number> = {};
-    for (const [key, value] of Object.entries(scores)) {
-      if (value !== "") {
-        inputScores[key] = Number(value);
+    try {
+      for (const input of inputs) {
+        const raw = scores[input.id];
+        if (raw === undefined || raw === "") continue;
+        if (input.type === "time_mmss") {
+          inputScores[input.id] = parseTimeMMSS(raw);
+        } else {
+          inputScores[input.id] = Number(raw);
+        }
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid input");
+      setSaving(false);
+      return;
     }
 
     try {
@@ -94,17 +105,31 @@ export function AssessmentEntry({
                     <span className="ml-1 text-destructive">*</span>
                   )}
                 </Label>
-                <Input
-                  id={input.id}
-                  type="number"
-                  min={input.min}
-                  max={input.max}
-                  step={input.type === "integer" ? 1 : "any"}
-                  value={scores[input.id] || ""}
-                  onChange={(e) => setScore(input.id, e.target.value)}
-                  required={input.required}
-                  className="mt-1"
-                />
+                {input.type === "time_mmss" ? (
+                  <Input
+                    id={input.id}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="MM:SS"
+                    pattern="\d+:[0-5]\d"
+                    value={scores[input.id] || ""}
+                    onChange={(e) => setScore(input.id, e.target.value)}
+                    required={input.required}
+                    className="mt-1"
+                  />
+                ) : (
+                  <Input
+                    id={input.id}
+                    type="number"
+                    min={input.min}
+                    max={input.max}
+                    step={input.type === "integer" ? 1 : "any"}
+                    value={scores[input.id] || ""}
+                    onChange={(e) => setScore(input.id, e.target.value)}
+                    required={input.required}
+                    className="mt-1"
+                  />
+                )}
                 {input.description && (
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {input.description}

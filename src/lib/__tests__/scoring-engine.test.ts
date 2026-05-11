@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import { executeScoring } from "@/lib/scoring-engine";
 import { ScoringRuleSet, ScoringContext } from "@/lib/types";
 
+const ctx = (ageYears = 10, ageMonths = 0): ScoringContext => ({
+  ageYears,
+  ageMonths,
+  gender: "male",
+});
+
 describe("executeScoring", () => {
   it("scores a lookup table step", () => {
     const ruleSet: ScoringRuleSet = {
@@ -18,10 +24,7 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = { input_1: 15 };
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(ruleSet, { input_1: 15 }, ctx());
 
     expect(results["output_1"]).toEqual({
       outputId: "output_1",
@@ -46,10 +49,11 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = { input_1: 10, input_2: 12 };
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(
+      ruleSet,
+      { input_1: 10, input_2: 12 },
+      ctx(),
+    );
 
     expect(results["output_1"].value).toBe(((10 + 12) / 2) * 15 + 100);
   });
@@ -83,10 +87,7 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = { input_1: 15 };
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(ruleSet, { input_1: 15 }, ctx());
 
     expect(results["standard_score"].value).toBe(85);
     expect(results["interpretation"].value).toBe("Low Average");
@@ -107,43 +108,145 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = { input_1: 2 };
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(ruleSet, { input_1: 2 }, ctx());
 
     expect(results["output_1"].value).toBe("Medium");
   });
 
-  it("handles condition-filtered lookup tables", () => {
+  it("resolves per-rule-set age groups by months", () => {
     const ruleSet: ScoringRuleSet = {
       version: "1.0",
-      description: "Test conditions",
+      description: "Test age groups",
       conditions: [{ id: "age_group", source: "patient.age" }],
+      ageGroups: [
+        { id: "young", minMonths: 60, maxMonths: 95 },
+        { id: "old", minMonths: 96, maxMonths: 130 },
+      ],
       steps: [
         {
           type: "lookup_table",
           outputId: "output_1",
           inputId: "input_1",
-          conditionFilters: { age_group: "5-7" },
+          conditionFilters: { age_group: "young" },
           table: { "10": 90 },
         },
         {
           type: "lookup_table",
           outputId: "output_1",
           inputId: "input_1",
-          conditionFilters: { age_group: "8-10" },
+          conditionFilters: { age_group: "old" },
           table: { "10": 95 },
         },
       ],
     };
 
-    const inputs = { input_1: 10 };
-    const context: ScoringContext = { age: 10, gender: "male" };
+    expect(
+      executeScoring(ruleSet, { input_1: 10 }, ctx(10, 0))["output_1"].value,
+    ).toBe(95);
+    expect(
+      executeScoring(ruleSet, { input_1: 10 }, ctx(7, 0))["output_1"].value,
+    ).toBe(90);
+  });
 
-    const results = executeScoring(ruleSet, inputs, context);
+  it("uses tablesByGroup for grouped lookup", () => {
+    const ruleSet: ScoringRuleSet = {
+      version: "1.0",
+      description: "Test grouped lookup",
+      conditions: [{ id: "age_group", source: "patient.age" }],
+      ageGroups: [
+        { id: "g1", minMonths: 60, maxMonths: 95 },
+        { id: "g2", minMonths: 96, maxMonths: 130 },
+      ],
+      steps: [
+        {
+          type: "lookup_table",
+          outputId: "output_1",
+          inputId: "input_1",
+          conditionKey: "age_group",
+          tablesByGroup: {
+            g1: { "10": 90 },
+            g2: { "10": 95 },
+          },
+        },
+      ],
+    };
 
-    expect(results["output_1"].value).toBe(95);
+    expect(
+      executeScoring(ruleSet, { input_1: 10 }, ctx(10, 0))["output_1"].value,
+    ).toBe(95);
+    expect(
+      executeScoring(ruleSet, { input_1: 10 }, ctx(7, 0))["output_1"].value,
+    ).toBe(90);
+  });
+
+  it("computes z_score from per-group stats", () => {
+    const ruleSet: ScoringRuleSet = {
+      version: "1.0",
+      description: "Test z_score",
+      conditions: [{ id: "age_group", source: "patient.age" }],
+      ageGroups: [{ id: "g1", minMonths: 60, maxMonths: 130 }],
+      steps: [
+        {
+          type: "z_score",
+          outputId: "duration_z",
+          inputId: "duration_seconds",
+          conditionKey: "age_group",
+          statsByGroup: {
+            g1: { mean: 600, sd: 100 },
+          },
+        },
+      ],
+    };
+
+    const results = executeScoring(
+      ruleSet,
+      { duration_seconds: 700 },
+      ctx(10, 0),
+    );
+
+    expect(results["duration_z"].value).toBe(1);
+  });
+
+  it("computes percentile via formula+erf for standard score", () => {
+    const ruleSet: ScoringRuleSet = {
+      version: "1.0",
+      description: "Test percentile",
+      conditions: [],
+      steps: [
+        {
+          type: "formula",
+          outputId: "percentile",
+          formula: "round((1 + erf((s - 100) / 15 / sqrt(2))) / 2 * 10000) / 100",
+          variables: { s: "standard_score" },
+        },
+      ],
+    };
+
+    const results = executeScoring(ruleSet, { standard_score: 131 }, ctx());
+
+    expect(results["percentile"].value).toBeCloseTo(98.06, 2);
+  });
+
+  it("returns out-of-range error when patient age has no matching group", () => {
+    const ruleSet: ScoringRuleSet = {
+      version: "1.0",
+      description: "Test out of range",
+      conditions: [{ id: "age_group", source: "patient.age" }],
+      ageGroups: [{ id: "g1", minMonths: 60, maxMonths: 95 }],
+      steps: [
+        {
+          type: "z_score",
+          outputId: "z",
+          inputId: "x",
+          conditionKey: "age_group",
+          statsByGroup: { g1: { mean: 0, sd: 1 } },
+        },
+      ],
+    };
+
+    const results = executeScoring(ruleSet, { x: 5 }, ctx(20, 0));
+
+    expect(results["z"].value).toContain("מטופל מחוץ לטווח");
   });
 
   it("returns error result for missing input", () => {
@@ -161,10 +264,7 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = {};
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(ruleSet, {}, ctx());
 
     expect(results["output_1"].value).toBe("Error: missing input input_1");
   });
@@ -190,10 +290,7 @@ describe("executeScoring", () => {
       ],
     };
 
-    const inputs = { input_2: 20 };
-    const context: ScoringContext = { age: 10, gender: "male" };
-
-    const results = executeScoring(ruleSet, inputs, context);
+    const results = executeScoring(ruleSet, { input_2: 20 }, ctx());
 
     expect(results["output_1"].value).toBe("Error: missing input input_1");
     expect(results["output_2"].value).toBe(100);

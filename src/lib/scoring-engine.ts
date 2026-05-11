@@ -4,7 +4,10 @@ import {
   ScoringResult,
   ScoringContext,
   ScoringStep,
+  AgeGroup,
 } from "@/lib/types";
+
+export const AGE_OUT_OF_RANGE = "AGE_OUT_OF_RANGE";
 
 export function executeScoring(
   ruleSet: ScoringRuleSet,
@@ -41,7 +44,11 @@ function resolveConditions(
   for (const condition of ruleSet.conditions) {
     switch (condition.source) {
       case "patient.age":
-        resolved[condition.id] = resolveAgeGroup(context.age);
+        resolved[condition.id] = resolveAgeGroup(
+          context.ageYears,
+          context.ageMonths,
+          ruleSet.ageGroups,
+        );
         break;
       case "patient.gender":
         resolved[condition.id] = context.gender;
@@ -52,7 +59,7 @@ function resolveConditions(
       case "input":
         if (condition.sourceInputId) {
           resolved[condition.id] = String(
-            context[condition.sourceInputId as keyof ScoringContext] || "",
+            context[condition.sourceInputId as keyof ScoringContext] ?? "",
           );
         }
         break;
@@ -62,19 +69,21 @@ function resolveConditions(
   return resolved;
 }
 
-function resolveAgeGroup(age: number): string {
-  if (age <= 7) return "5-7";
-  if (age <= 10) return "8-10";
-  if (age <= 13) return "11-13";
-  if (age <= 16) return "14-16";
-  if (age <= 23) return "17-23";
-  if (age <= 29) return "24-29";
-  if (age <= 39) return "30-39";
-  if (age <= 49) return "40-49";
-  if (age <= 59) return "50-59";
-  if (age <= 69) return "60-69";
-  if (age <= 79) return "70-79";
-  return "80+";
+function resolveAgeGroup(
+  ageYears: number,
+  ageMonths: number,
+  ageGroups: AgeGroup[] | undefined,
+): string {
+  if (!ageGroups || ageGroups.length === 0) {
+    return AGE_OUT_OF_RANGE;
+  }
+
+  const totalMonths = ageYears * 12 + ageMonths;
+  const match = ageGroups.find(
+    (g) => totalMonths >= g.minMonths && totalMonths <= g.maxMonths,
+  );
+
+  return match ? match.id : AGE_OUT_OF_RANGE;
 }
 
 function matchesConditions(
@@ -101,35 +110,49 @@ function executeStep(
       return executeThreshold(step, priorResults);
     case "mapping":
       return executeMapping(step, inputs);
+    case "z_score":
+      return executeZScore(step, inputs, resolvedConditions);
   }
 }
 
 function executeLookup(
-  step: { outputId: string; inputId: string; table: Record<string, number> },
+  step: {
+    outputId: string;
+    inputId: string;
+    table?: Record<string, number>;
+    conditionKey?: string;
+    tablesByGroup?: Record<string, Record<string, number>>;
+  },
   inputs: Record<string, number>,
   resolvedConditions: Record<string, string>,
 ): ScoringResult {
   const inputValue = resolvedConditions[step.inputId] ?? inputs[step.inputId];
 
   if (inputValue === undefined) {
-    return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: missing input ${step.inputId}`,
-      type: "custom",
-    };
+    return errorResult(step.outputId, `missing input ${step.inputId}`);
+  }
+
+  let table: Record<string, number> | undefined;
+  if (step.tablesByGroup && step.conditionKey) {
+    const groupKey = resolvedConditions[step.conditionKey];
+    if (!groupKey || groupKey === AGE_OUT_OF_RANGE) {
+      return errorResult(step.outputId, "מטופל מחוץ לטווח גילי המבחן");
+    }
+    table = step.tablesByGroup[groupKey];
+    if (!table) {
+      return errorResult(step.outputId, `no table for group ${groupKey}`);
+    }
+  } else if (step.table) {
+    table = step.table;
+  } else {
+    return errorResult(step.outputId, "lookup_table missing data");
   }
 
   const key = String(inputValue);
-  const value = step.table[key];
+  const value = table[key];
 
   if (value === undefined) {
-    return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: no table entry for ${key}`,
-      type: "custom",
-    };
+    return errorResult(step.outputId, `no table entry for ${key}`);
   }
 
   return {
@@ -160,21 +183,12 @@ function executeFormula(
     ) {
       scope[placeholder] = priorResults[sourceId].value as number;
     } else {
-      return {
-        outputId: step.outputId,
-        label: step.outputId,
-        value: `Error: missing variable ${sourceId}`,
-        type: "custom",
-      };
+      return errorResult(step.outputId, `missing variable ${sourceId}`);
     }
   }
 
   try {
-    let expression = step.formula;
-    for (const [placeholder, val] of Object.entries(scope)) {
-      expression = expression.replaceAll(`{${placeholder}}`, String(val));
-    }
-    const value = evaluate(expression, scope) as number;
+    const value = evaluate(step.formula, scope) as number;
     return {
       outputId: step.outputId,
       label: step.outputId,
@@ -182,12 +196,7 @@ function executeFormula(
       type: "custom",
     };
   } catch {
-    return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: formula evaluation failed`,
-      type: "custom",
-    };
+    return errorResult(step.outputId, `formula evaluation failed`);
   }
 }
 
@@ -203,9 +212,10 @@ function executeThreshold(
 
   if (!source || typeof source.value !== "number") {
     return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: missing source output ${step.sourceOutputId}`,
+      ...errorResult(
+        step.outputId,
+        `missing source output ${step.sourceOutputId}`,
+      ),
       type: "interpretation",
     };
   }
@@ -218,9 +228,7 @@ function executeThreshold(
   return {
     outputId: step.outputId,
     label: step.outputId,
-    value: match
-      ? match.label
-      : `Error: no threshold match for ${source.value}`,
+    value: match ? match.label : `Error: no threshold match for ${source.value}`,
     type: "interpretation",
   };
 }
@@ -236,30 +244,67 @@ function executeMapping(
   const inputValue = inputs[step.sourceId];
 
   if (inputValue === undefined) {
-    return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: missing input ${step.sourceId}`,
-      type: "custom",
-    };
+    return errorResult(step.outputId, `missing input ${step.sourceId}`);
   }
 
   const key = String(inputValue);
   const value = step.map[key];
 
   if (value === undefined) {
-    return {
-      outputId: step.outputId,
-      label: step.outputId,
-      value: `Error: no mapping for ${key}`,
-      type: "custom",
-    };
+    return errorResult(step.outputId, `no mapping for ${key}`);
   }
 
   return {
     outputId: step.outputId,
     label: step.outputId,
     value,
+    type: "custom",
+  };
+}
+
+function executeZScore(
+  step: {
+    outputId: string;
+    inputId: string;
+    conditionKey: string;
+    statsByGroup: Record<string, { mean: number; sd: number }>;
+  },
+  inputs: Record<string, number>,
+  resolvedConditions: Record<string, string>,
+): ScoringResult {
+  const inputValue = inputs[step.inputId];
+
+  if (inputValue === undefined) {
+    return errorResult(step.outputId, `missing input ${step.inputId}`);
+  }
+
+  const groupKey = resolvedConditions[step.conditionKey];
+
+  if (!groupKey || groupKey === AGE_OUT_OF_RANGE) {
+    return errorResult(step.outputId, "מטופל מחוץ לטווח גילי המבחן");
+  }
+
+  const stats = step.statsByGroup[groupKey];
+
+  if (!stats) {
+    return errorResult(step.outputId, `no stats for group ${groupKey}`);
+  }
+
+  const z = (inputValue - stats.mean) / stats.sd;
+
+  return {
+    outputId: step.outputId,
+    label: step.outputId,
+    value: Math.round(z * 100) / 100,
+    type: "custom",
+  };
+}
+
+function errorResult(outputId: string, message: string): ScoringResult {
+  return {
+    outputId,
+    label: outputId,
+    value: `Error: ${message}`,
     type: "custom",
   };
 }
